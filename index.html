@@ -1,0 +1,407 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Portfolio</title>
+<style>
+  :root{
+    --ink: rgb(40,40,40);        /* index list + general copy */
+    --ink-strong: rgb(0,0,0);    /* hover-reveal metadata */
+    --link-active: #0000EE;      /* selected item */
+    --font: -apple-system, system-ui, "Segoe UI", Roboto, Ubuntu, Arial, sans-serif;
+
+    --col-left: 8%;              /* left column: intro + nav (the red third) */
+    --panel-w: 440px;            /* width of the content column */
+    --col-right: calc((1133px - var(--panel-w)) / 2);  /* content column, centered in the 1133px canvas → centered in the window (the green third) */
+    --preview-w: 480px;
+    --preview-h: 270px;          /* 16:9 */
+  }
+
+  *{ box-sizing: border-box; }
+  html, body{ height: 100%; }
+  body{
+    margin: 0;
+    background: #fff;
+    color: var(--ink);
+    font: 400 13px/1.2 var(--font);
+    overflow: hidden;            /* single screen, no scroll */
+    display: flex;               /* center the fixed-width canvas in the window */
+    justify-content: center;
+    align-items: flex-start;
+  }
+
+  /* fixed-proportion canvas: the whole layout lives here and scales down
+     uniformly as the window shrinks, instead of reflowing/colliding */
+  .frame{
+    position: relative;
+    width: 1133px;
+    height: 760px;
+    flex: none;                  /* keep full 1133px layout box; only transform scales it */
+    transform-origin: top center;
+    transform: scale(var(--s, 1));
+  }
+  a{ color: inherit; text-decoration: none; }
+  a:hover{ color: var(--link-active); }
+
+  /* ---- left column: media preview (hidden until hover) ---- */
+  .stage{
+    position: absolute; left: var(--col-left); top: 130px;
+    width: var(--preview-w); height: var(--preview-h);
+  }
+  .preview{
+    position: absolute; inset: 0;
+    opacity: 0; transition: opacity .18s ease;   /* simple fade, nothing else */
+    pointer-events: none;
+  }
+  .preview.is-active{ opacity: 1; }
+  .preview img,
+  .preview video,
+  .preview .ph{ width: 100%; height: 100%; object-fit: cover; display: block; }
+  .ph{
+    background: #ededed; color: #8a8a8a;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px;
+  }
+
+  /* ---- left column: metadata (hidden until hover) ---- */
+  .meta{
+    position: absolute; left: var(--col-left); top: 412px; width: var(--preview-w);
+  }
+  .meta .m{
+    position: absolute; top: 0; left: 0;
+    opacity: 0; transition: opacity .18s ease;
+    color: var(--ink-strong);
+  }
+  .meta .m.is-active{ opacity: 1; }
+  .meta .m p{ margin: 0 0 4px; line-height: 1.25; }
+
+  /* ---- left column: permanent copy ---- */
+  /* left-column nav: lives OUTSIDE the canvas so it can center in the window's
+     LEFT THIRD (a viewport concept, not a canvas one), while still scaling with
+     --s. transform-origin top-center keeps it pinned to the third's centre at
+     any scale; the box is the full third wide and the text is centred in it.
+     padding-top lifts the nav up into the empty band beside the cover photo so
+     its block sits vertically centred on the photo (photo center ≈ 283px), not
+     stranded down near the page bottom. */
+  .intro{
+    position: fixed; top: 0; left: 0;
+    width: 33.333vw;                 /* the red third */
+    padding-top: 226px;              /* sit beside the photo, vertically centred on it */
+    text-align: center;              /* centre the nav within the third */
+    line-height: 1.4;
+    transform: scale(var(--s, 1));
+    transform-origin: top center;
+    pointer-events: none;            /* the transparent box doesn't catch clicks… */
+  }
+  .intro p{ margin: 0 0 14px; }
+  .intro a{ pointer-events: auto; }  /* …but the nav links do */
+
+  /* ---- live clock: sits above the photo, centered over the right-hand
+         content column. Lives INSIDE .frame so it scales with the design and
+         tracks the same column as the cover / about / contact content. ---- */
+  .clockbar{ position: absolute; top: 40px; left: var(--col-right); width: var(--panel-w); text-align: center; pointer-events: none; }
+  .clockbar .clock{ display: inline-block; }
+
+  /* ---- bottom footer: icon row (white background, ink-colored) ---- */
+  .footer{
+    position: fixed; right: 40px; bottom: 40px;
+    transform: scale(var(--s, 1)); transform-origin: bottom right;
+    display: flex; align-items: center; gap: 1px;
+  }
+  /* each slot stacks a light (default) + dark (hover) version, cross-faded */
+  .ic-slot{ position: relative; width: 28px; height: 28px; display: block; }
+  .ic-slot .ic{
+    position: absolute; inset: 0; width: 28px; height: 28px;
+    fill: var(--ink); display: block;
+    transition: opacity .18s ease;
+  }
+  .ic-slot .ic-dark{ opacity: 0; }
+  .ic-slot:hover .ic-light{ opacity: 0; }
+  .ic-slot:hover .ic-dark{ opacity: 1; }
+
+  /* ---- right column: swappable content panel (home / about / contact) ---- */
+  .panel{ position: absolute; left: var(--col-right); top: 136px; width: var(--panel-w); }
+  .view{ display: none; }
+  .view.is-active{ display: block; }
+
+  /* home cover photo — shares the panel's left edge with the about/contact text */
+  .cover{ display: block; width: 100%; max-width: 100%; height: auto; margin: 0 0 16px; }
+
+  /* home = cover photo + project index */
+  .index ul{ list-style: none; margin: 0; padding: 0; }
+  .index li{ line-height: 13px; white-space: nowrap; }   /* extremely tight */
+  .index [data-i]{ display: block; cursor: pointer; }
+  .index span[data-i]{ cursor: default; }                /* non-linked items */
+  .index [data-i]:hover,
+  .index [data-i].is-active{ color: var(--link-active); }
+
+  /* about */
+  .about p{ margin: 0; line-height: 1.55; max-width: 420px; }
+
+  /* contact */
+  .contact-lead{ margin: 0; line-height: 1.5; }
+
+  /* active section in the left-column nav */
+  .intro a.is-active{ color: var(--link-active); }
+
+  /* ============================================================
+   * MOBILE / SMALL SCREENS
+   * The desktop "scale-to-fit canvas" shrinks 13px text to ~4px on a
+   * phone, so on small screens we abandon the fixed canvas entirely and
+   * reflow into one readable, scrollable column:
+   *     clock  ->  intro + nav  ->  project index  ->  icons
+   * The media test covers portrait phones (<=700px wide) AND landscape
+   * phones (short + not-too-wide). Anything larger keeps the desktop design.
+   * ============================================================ */
+  @media (max-width: 700px), (max-width: 950px) and (max-height: 600px){
+    html, body{ height: auto; }
+    body{
+      overflow: visible;                 /* re-enable vertical scrolling */
+      display: flex; flex-direction: column;
+      justify-content: flex-start;       /* override desktop centering */
+      align-items: stretch;              /* keep stacked blocks full-width */
+      min-height: 100vh;
+      padding: 28px 24px 32px;
+      font-size: 16px;                   /* readable base size */
+      -webkit-text-size-adjust: 100%;    /* stop iOS auto-inflating text */
+    }
+
+    /* clock: top of the page, in normal flow, centered, unscaled */
+    .clockbar{
+      order: 0;
+      position: static; left: auto; width: auto;
+      text-align: center; margin: 0 0 40px;
+    }
+    .clockbar .clock{ font-size: 16px; }
+
+    /* canvas box dissolves so its children (clock, panel) join the body's flex
+       column directly; the order:* values below sequence them with the nav and
+       icons → clock, nav, content, icons */
+    .frame{ display: contents; }
+
+    /* the hover-reveal preview + metadata don't exist on touch, so hide
+       them here (they're also empty until you add projects) */
+    .stage, .meta{ display: none; }
+
+    /* the two desktop columns become stacked, full-width blocks */
+    .intro{
+      order: 1;
+      position: static; left: auto; top: auto; width: auto;
+      padding-top: 0; transform: none; text-align: left; pointer-events: auto;
+      line-height: 1.6; margin: 0 0 32px;
+    }
+    .intro p{ margin: 0 0 16px; }
+
+    .panel{ order: 2; position: static; left: auto; top: auto; width: auto; }
+    .index{ position: static; left: auto; top: auto; }
+    .index li{ line-height: 2; white-space: normal; }   /* wrap + tap-friendly */
+    .about p{ max-width: none; }
+
+    /* icons: bottom of the page, in flow, unscaled, left-aligned */
+    .footer{
+      order: 3; position: static; transform: none;
+      justify-content: flex-start;
+      margin-top: auto; padding-top: 40px;   /* sit at the bottom */
+    }
+  }
+</style>
+</head>
+<body>
+  <div class="frame" id="frame">
+    <!-- left column media + metadata (all preloaded, one shown at a time) -->
+    <div class="stage" id="stage"></div>
+    <div class="meta" id="meta"></div>
+
+    <!-- live clock: centered above the photo / right-hand content column -->
+    <div class="clockbar"><span class="clock" id="clock">00:00:00</span></div>
+
+    <!-- right column: swappable content panel (home / about / contact) -->
+    <div class="panel" id="panel">
+      <!-- HOME — cover photo + project index (default view) -->
+      <section class="view home is-active" data-view="home">
+        <img class="cover" src="DSCF1927.jpg" alt="Cover photograph" loading="eager">
+        <nav class="index" id="nav">
+          <ul id="list"></ul>
+        </nav>
+      </section>
+
+      <!-- ABOUT -->
+      <section class="view about" data-view="about">
+        <p>My name is Alexander, but most people call me Alex. I like the library. I am a 23 year old student enrolled online at USU studying Information Systems.</p>
+      </section>
+
+      <!-- CONTACT — online form coming later; phone only for now -->
+      <section class="view contact" data-view="contact">
+        <p class="contact-lead">Call <a href="tel:+18016943473">801-694-3473</a>.</p>
+      </section>
+    </div>
+  </div>
+
+  <!-- permanent left-column copy + section nav. Lives OUTSIDE .frame (like the
+       footer) so it pins to the VIEWPORT and can centre in the window's left
+       third; scales via --s to stay proportional with the canvas. -->
+  <div class="intro">
+    <p>Please enjoy your stay.</p>
+    <p><a href="#" data-nav="home">[Home]</a></p>
+    <p><a href="#about" data-nav="about">[About]</a></p>
+    <p><a href="#contact" data-nav="contact">[Contact]</a></p>
+  </div>
+
+  <!-- bottom footer: decorative icon row; pinned to the window's bottom-right.
+       Lives OUTSIDE .frame so it anchors to the viewport (not the scaled canvas),
+       and scales via --s so it stays proportional. Each slot fades light -> dark on hover. -->
+  <div class="footer">
+      <span class="ic-slot">
+        <svg class="ic ic-light" viewBox="0 0 500 500" aria-hidden="true"><path d="M439.07,209.18c-5-22.56-14.11-43.67-26.46-62.43-19.18-29.21-46.32-52.95-78.36-68.23-25.06-11.93-53.15-18.73-82.82-18.93h-3.93c-105.73,1.33-191.02,86.07-191.02,190.39s86.64,190.44,193.54,190.44c30.16,0,58.75-6.78,84.22-18.91,32.04-15.28,59.18-38.97,78.36-68.21,12.36-18.81,21.46-39.92,26.46-62.53,2.93-13.11,4.45-26.76,4.45-40.79s-1.53-27.64-4.45-40.79ZM335.24,401.6h-.02c-25.24,13.73-54.28,21.59-85.19,21.59-98.1,0-177.54-78.96-176.04-175.91,1.45-93.42,79.19-169.46,174.14-170.41,31.64-.35,61.33,7.53,87.09,21.56,0,0,.02,0,.02.05v303.12Z"/></svg>
+        <svg class="ic ic-dark" viewBox="0 0 500 500" aria-hidden="true"><path d="M0,0v500h500V0H0ZM439.07,290.77c-5.01,22.61-14.11,43.72-26.47,62.53-19.18,29.24-46.32,52.93-78.36,68.21-25.46,12.13-54.05,18.91-84.21,18.91-106.91,0-193.55-85.24-193.55-190.45S141.77,60.91,247.5,59.58h3.93c29.66.2,57.75,7.01,82.81,18.94,32.04,15.28,59.18,39.02,78.36,68.23,12.36,18.76,21.46,39.87,26.47,62.43,2.92,13.16,4.45,26.81,4.45,40.79s-1.53,27.69-4.45,40.8Z"/><path d="M335.24,98.48v303.12h-.02c-25.24,13.73-54.28,21.58-85.19,21.58-98.1,0-177.54-78.96-176.04-175.91,1.45-93.42,79.19-169.45,174.13-170.4,31.64-.35,61.33,7.52,87.1,21.56,0,0,.02,0,.02.05Z"/></svg>
+      </span>
+      <span class="ic-slot">
+        <svg class="ic ic-light" viewBox="0 0 500 500" aria-hidden="true"><path d="M423.41,248.07v3.95c0,3.85-3.13,6.98-6.98,6.98h-189.92c-5.78,0-9.05,6.6-5.53,11.18l137.12,179.66c2.33,3.05,1.75,7.4-1.3,9.75l-3.15,2.4c-3.05,2.33-7.43,1.75-9.75-1.3l-144.05-188.72c-2.8-3.65-8.3-3.65-11.08,0l-32.64,42.77c-2.35,3.05-6.73,3.65-9.78,1.3l-3.15-2.4c-3.05-2.33-3.63-6.7-1.3-9.75l25.74-33.72c3.5-4.58.23-11.18-5.53-11.18h-78.54c-3.85,0-6.98-3.13-6.98-6.98v-3.95c0-3.85,3.13-6.98,6.98-6.98h78.61c5.75,0,9.03-6.6,5.53-11.18l-25.81-33.82c-2.33-3.08-1.75-7.43,1.33-9.78l3.13-2.38c3.08-2.35,7.43-1.75,9.75,1.3l32.67,42.77c2.78,3.65,8.28,3.65,11.08,0L343.9,39.3c2.33-3.05,6.7-3.63,9.75-1.3l3.15,2.4c3.05,2.33,3.63,6.7,1.3,9.75l-137.22,179.76c-3.5,4.58-.23,11.18,5.53,11.18h190.02c3.85,0,6.98,3.13,6.98,6.98Z"/></svg>
+        <svg class="ic ic-dark" viewBox="0 0 500 500" aria-hidden="true"><path d="M0,0v500h500V0H0ZM423.41,252.03c0,3.85-3.13,6.97-6.98,6.97h-189.92c-5.77,0-9.05,6.61-5.52,11.18l137.11,179.67c2.33,3.05,1.75,7.4-1.3,9.75l-3.15,2.4c-3.05,2.33-7.43,1.75-9.75-1.3l-144.05-188.71c-2.8-3.66-8.3-3.66-11.08,0l-32.64,42.77c-2.35,3.05-6.73,3.65-9.78,1.3l-3.15-2.4c-3.05-2.33-3.63-6.71-1.3-9.76l25.73-33.72c3.51-4.57.23-11.18-5.52-11.18h-78.54c-3.85,0-6.98-3.12-6.98-6.97v-3.96c0-3.85,3.13-6.97,6.98-6.97h78.61c5.75,0,9.03-6.61,5.53-11.18l-25.81-33.82c-2.33-3.08-1.75-7.43,1.32-9.78l3.13-2.38c3.08-2.35,7.43-1.75,9.75,1.3l32.67,42.77c2.78,3.66,8.28,3.66,11.08,0L343.9,39.3c2.32-3.05,6.7-3.63,9.75-1.3l3.15,2.4c3.05,2.32,3.63,6.7,1.3,9.75l-137.21,179.77c-3.51,4.57-.23,11.18,5.52,11.18h190.02c3.85,0,6.98,3.12,6.98,6.97v3.96Z"/></svg>
+      </span>
+  </div>
+
+<script>
+  /* ============================================================
+   * PORTFOLIO CONTENT  —  this is the only part you edit to add work.
+   * ------------------------------------------------------------
+   * Each entry below becomes one line in the right-hand index.
+   * Hovering it reveals the media on the left plus three metadata
+   * lines (title / description / credit).
+   *
+   * To add a piece:
+   *   1. Put the file in the  media/  folder  (e.g. media/my_film.mp4).
+   *   2. Add an entry to the array using the shape below.
+   *
+   * Entry shape:
+   *   {
+   *     file:   "My_Project_Name.mp4",  // text shown in the index list
+   *     linked: true,                    // true = link, false = plain text
+   *     href:   "#",                     // optional URL to open on click
+   *     title:  "My Project — Full Title",
+   *     log:    "One-line description of the work.",
+   *     credit: "Your role / credit line.",
+   *     media:  { type: "video", src: "media/my_film.mp4" }  // or type:"image"
+   *   }
+   * Omit `media` to show a neutral placeholder frame instead.
+   * ============================================================ */
+  const projects = [
+    // (empty for now — upload your work and entries get added here)
+  ];
+
+  const stage = document.getElementById("stage");
+  const metaWrap = document.getElementById("meta");
+  const list = document.getElementById("list");
+  const nav = document.getElementById("nav");
+
+  projects.forEach((p, i) => {
+    // ---- preview (stacked in the stage) ----
+    const prev = document.createElement("div");
+    prev.className = "preview";
+    if (p.media && p.media.type === "image" && p.media.src) {
+      const img = document.createElement("img");
+      img.src = p.media.src; img.alt = p.title; img.loading = "eager";
+      prev.appendChild(img);
+    } else if (p.media && p.media.type === "video" && p.media.src) {
+      const v = document.createElement("video");
+      v.src = p.media.src; v.muted = true; v.loop = true; v.playsInline = true; v.preload = "auto";
+      prev.appendChild(v);
+    } else {
+      const ph = document.createElement("div");
+      ph.className = "ph"; ph.textContent = p.file;
+      prev.appendChild(ph);
+    }
+    stage.appendChild(prev);
+
+    // ---- metadata (stacked below the stage) ----
+    const m = document.createElement("div");
+    m.className = "m";
+    const t = document.createElement("p"); t.textContent = p.title;
+    const l = document.createElement("p"); l.textContent = p.log;
+    const c = document.createElement("p"); c.textContent = p.credit;
+    m.append(t, l, c);
+    metaWrap.appendChild(m);
+
+    // ---- index list item ----
+    const li = document.createElement("li");
+    const el = document.createElement(p.linked ? "a" : "span");
+    if (p.linked) el.href = p.href || "#";
+    el.textContent = p.file;
+    el.dataset.i = i;
+    li.appendChild(el);
+    list.appendChild(li);
+
+    el.addEventListener("mouseenter", () => setActive(i));
+    el.addEventListener("focus", () => setActive(i));
+  });
+
+  const previews = [...stage.children];
+  const metas = [...metaWrap.children];
+  const items = [...list.querySelectorAll("[data-i]")];
+
+  function setActive(i) {
+    previews.forEach((p, idx) => p.classList.toggle("is-active", idx === i));
+    metas.forEach((m, idx) => m.classList.toggle("is-active", idx === i));
+    items.forEach((it) => it.classList.toggle("is-active", Number(it.dataset.i) === i));
+    const v = previews[i].querySelector("video");
+    if (v) { v.currentTime = 0; v.play().catch(() => {}); }
+  }
+
+  function clearActive() {
+    previews.forEach((p) => p.classList.remove("is-active"));
+    metas.forEach((m) => m.classList.remove("is-active"));
+    items.forEach((it) => it.classList.remove("is-active"));
+    document.querySelectorAll("video").forEach((v) => v.pause());
+  }
+
+  // blank out when the pointer leaves the index entirely (lets moving
+  // between items cross-fade instead of flashing to empty)
+  list.addEventListener("mouseleave", clearActive);
+  nav.addEventListener("focusout", (e) => {
+    if (!nav.contains(e.relatedTarget)) clearActive();
+  });
+
+  // ---- scale the whole frame to fit the window ----
+  // matches the .frame dimensions in CSS; never scales above 1:1
+  const DESIGN_W = 1133, DESIGN_H = 760;
+  function fit() {
+    const s = Math.min(1, window.innerWidth / DESIGN_W, window.innerHeight / DESIGN_H);
+    document.documentElement.style.setProperty("--s", s);
+  }
+  window.addEventListener("resize", fit);
+  window.addEventListener("orientationchange", fit);
+  fit();
+
+  // ---- live clock (replaces the old index heading) ----
+  const clock = document.getElementById("clock");
+  const pad = (n) => String(n).padStart(2, "0");
+  function tick() {
+    const d = new Date();
+    clock.textContent = pad(d.getHours()) + ":" + pad(d.getMinutes()) + ":" + pad(d.getSeconds());
+  }
+  tick();
+  setInterval(tick, 1000);
+
+  // ---- section views (home / about / contact) ----
+  // The left-column links swap which block shows in the right-hand panel.
+  // Hash-based so views are deep-linkable (#about, #contact) and the
+  // browser back button works. "Home" (href="#") returns to the default.
+  const navLinks = [...document.querySelectorAll(".intro [data-nav]")];
+  const views = [...document.querySelectorAll(".view[data-view]")];
+  const viewNames = new Set(views.map((v) => v.dataset.view));
+  function showView(name) {
+    const target = viewNames.has(name) ? name : "home";
+    views.forEach((v) => v.classList.toggle("is-active", v.dataset.view === target));
+    navLinks.forEach((a) => a.classList.toggle("is-active", a.dataset.nav === target));
+  }
+  function routeFromHash() {
+    showView((location.hash || "").replace(/^#/, "").toLowerCase());
+  }
+  window.addEventListener("hashchange", routeFromHash);
+  routeFromHash();
+
+  // (A contact submission form will be wired up later with a real backend.)
+</script>
+</body>
+</html>

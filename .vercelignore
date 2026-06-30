@@ -1,0 +1,9 @@
+# dev tooling / OS junk — not part of the published site
+.claude
+.DS_Store
+
+# leftover folders from the old Icons / Videos / Website tabs (removed from nav)
+icons
+media
+videos
+website

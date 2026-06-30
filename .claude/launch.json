@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "static",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["/Users/alexmadsen/Desktop/alexandermweb/.claude/static-server.js"],
+      "port": 8123
+    }
+  ]
+}
