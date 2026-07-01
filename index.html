@@ -3,7 +3,9 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Portfolio</title>
+<title>alexander</title>
+<!-- favicon: a solid circle in the site's forest-green (matches the About card) -->
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='16' fill='%232f5241'/></svg>">
 <style>
   :root{
     --ink: rgb(40,40,40);        /* index list + general copy */
@@ -222,12 +224,14 @@
     .intro p{ margin: 0 0 16px; }
 
     .panel{ order: 2; position: static; left: auto; top: auto; width: auto; perspective: none; }
-    /* dissolve the flip-card on touch: faces flow as plain stacked blocks —
-       no 3-D, no coloured backs — preserving the approved mobile reading view */
+    /* dissolve the flip-card on touch: faces flow as plain stacked blocks with
+       no 3-D — but KEEP the coloured backs (background + ink inherited from the
+       desktop rules) so About/Contact still read as cards anywhere the flip
+       can't run: narrow screens, stacked layout, no-3D browsers */
     .card{ width: auto; height: auto; transform: none; transform-style: flat; }
     .view{ position: static; }
     .cover{ height: auto; }
-    .about, .contact{ background: none; color: inherit; padding: 0; }
+    .about, .contact{ padding: 22px 24px; }   /* colour + ink kept; just retune the inset */
     .about.is-active, .contact.is-active{ display: block; }
     .index{ position: static; left: auto; top: auto; margin-top: 0; }
     .index li{ line-height: 2; white-space: normal; }   /* wrap + tap-friendly */
