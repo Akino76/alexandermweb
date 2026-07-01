@@ -140,7 +140,7 @@
   .about p{ margin: 0; line-height: 1.55; max-width: 420px; }
 
   /* contact */
-  .contact-lead{ margin: 0; line-height: 1.5; }
+  .contact-lead{ margin: 0 0 10px; line-height: 1.5; }   /* small gap between the phone + schedule lines */
 
   /* active section in the left-column nav */
   .intro a.is-active{ color: var(--link-active); }
@@ -231,9 +231,10 @@
         <p>My name is Alexander, but most people call me Alex. I like the library. I am a 23 year old student enrolled online at USU studying Information Systems.</p>
       </section>
 
-      <!-- CONTACT — online form coming later; phone only for now -->
+      <!-- CONTACT — phone number + Calendly scheduling link (plain anchor, opens in a new tab; no third-party script loaded) -->
       <section class="view contact" data-view="contact">
         <p class="contact-lead">Call <a href="tel:+18016943473">801-694-3473</a>.</p>
+        <p class="contact-lead"><a href="https://calendly.com/zanderman765/15-minute-meeting" target="_blank" rel="noopener noreferrer">[Schedule a 15-minute meeting ↗]</a></p>
       </section>
     </div>
   </div>
