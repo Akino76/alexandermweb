@@ -16,6 +16,13 @@
     --col-right: calc((1133px - var(--panel-w)) / 2);  /* content column, centered in the 1133px canvas → centered in the window (the green third) */
     --preview-w: 480px;
     --preview-h: 270px;          /* 16:9 */
+
+    /* flip-card faces — About / Contact get a coloured back the same size as
+       the cover photo, so the content area reads as a deck of cards */
+    --card-h: 293px;             /* = cover photo height at 440px wide (2304×1536 → 3:2) */
+    --card-about: #2f5241;       /* muted forest green */
+    --card-contact: #7c4a3a;     /* muted terracotta */
+    --card-ink: #f2ede3;         /* light copy on the coloured faces */
   }
 
   *{ box-sizing: border-box; }
@@ -120,27 +127,48 @@
   .ic-slot:hover .ic-light{ opacity: 0; }
   .ic-slot:hover .ic-dark{ opacity: 1; }
 
-  /* ---- right column: swappable content panel (home / about / contact) ---- */
-  .panel{ position: absolute; left: var(--col-right); top: 136px; width: var(--panel-w); }
-  .view{ display: none; }
+  /* ---- right column: swappable content panel (home / about / contact) ----
+     The three views share ONE flip-card. Clicking a tab rotates the card
+     edge-on (rotateX 90°), swaps the visible face while it's invisible, then
+     rotates the new face back in — so the content area reads as a card deck.
+     perspective on the panel gives the rotation its 3-D depth. */
+  .panel{ position: absolute; left: var(--col-right); top: 136px; width: var(--panel-w); perspective: 1600px; }
+
+  .card{
+    position: relative;
+    width: 100%;
+    height: var(--card-h);           /* every face is the photo's footprint */
+    transform-style: preserve-3d;
+    will-change: transform;
+  }
+
+  /* faces stack on top of each other; only the active one is shown */
+  .view{ position: absolute; inset: 0; display: none; }
   .view.is-active{ display: block; }
+  .about.is-active,
+  .contact.is-active{ display: flex; flex-direction: column; justify-content: center; }
 
-  /* home cover photo — shares the panel's left edge with the about/contact text */
-  .cover{ display: block; width: 100%; max-width: 100%; height: auto; margin: 0 0 16px; }
+  /* HOME face — the cover photo fills the whole card */
+  .cover{ display: block; width: 100%; height: 100%; object-fit: cover; margin: 0; }
 
-  /* home = cover photo + project index */
+  /* ABOUT / CONTACT faces — coloured backs, light copy, same size as the photo */
+  .about, .contact{ padding: 30px 34px; color: var(--card-ink); }
+  .about{ background: var(--card-about); }
+  .contact{ background: var(--card-contact); }
+  .about p{ margin: 0; line-height: 1.55; color: inherit; }
+  .contact-lead{ margin: 0 0 10px; line-height: 1.5; color: inherit; }   /* gap between phone + schedule */
+  .about a, .contact a{ color: inherit; }
+  .about a:hover, .contact a:hover{ color: #fff; text-decoration: underline; }
+
+  /* project index — sits below the card, shown only on Home (empty until you add work) */
+  .index{ margin-top: 14px; }
+  .panel:not([data-cur="home"]) .index{ display: none; }
   .index ul{ list-style: none; margin: 0; padding: 0; }
   .index li{ line-height: 13px; white-space: nowrap; }   /* extremely tight */
   .index [data-i]{ display: block; cursor: pointer; }
   .index span[data-i]{ cursor: default; }                /* non-linked items */
   .index [data-i]:hover,
   .index [data-i].is-active{ color: var(--link-active); }
-
-  /* about */
-  .about p{ margin: 0; line-height: 1.55; max-width: 420px; }
-
-  /* contact */
-  .contact-lead{ margin: 0 0 10px; line-height: 1.5; }   /* small gap between the phone + schedule lines */
 
   /* active section in the left-column nav */
   .intro a.is-active{ color: var(--link-active); }
@@ -193,8 +221,15 @@
     }
     .intro p{ margin: 0 0 16px; }
 
-    .panel{ order: 2; position: static; left: auto; top: auto; width: auto; }
-    .index{ position: static; left: auto; top: auto; }
+    .panel{ order: 2; position: static; left: auto; top: auto; width: auto; perspective: none; }
+    /* dissolve the flip-card on touch: faces flow as plain stacked blocks —
+       no 3-D, no coloured backs — preserving the approved mobile reading view */
+    .card{ width: auto; height: auto; transform: none; transform-style: flat; }
+    .view{ position: static; }
+    .cover{ height: auto; }
+    .about, .contact{ background: none; color: inherit; padding: 0; }
+    .about.is-active, .contact.is-active{ display: block; }
+    .index{ position: static; left: auto; top: auto; margin-top: 0; }
     .index li{ line-height: 2; white-space: normal; }   /* wrap + tap-friendly */
     .about p{ max-width: none; }
 
@@ -216,26 +251,30 @@
     <!-- live clock: centered above the photo / right-hand content column -->
     <div class="clockbar"><span class="clock" id="clock">00:00:00</span></div>
 
-    <!-- right column: swappable content panel (home / about / contact) -->
+    <!-- right column: swappable content panel — three faces of one flip-card -->
     <div class="panel" id="panel">
-      <!-- HOME — cover photo + project index (default view) -->
-      <section class="view home is-active" data-view="home">
-        <img class="cover" src="DSCF1927.jpg" alt="Cover photograph" loading="eager">
-        <nav class="index" id="nav">
-          <ul id="list"></ul>
-        </nav>
-      </section>
+      <div class="card" id="card">
+        <!-- HOME — cover photo (default face) -->
+        <section class="view home is-active" data-view="home">
+          <img class="cover" src="DSCF1927.jpg" alt="Cover photograph" loading="eager">
+        </section>
 
-      <!-- ABOUT -->
-      <section class="view about" data-view="about">
-        <p>My name is Alexander, but most people call me Alex. I like the library. I am a 23 year old student enrolled online at USU studying Information Systems.</p>
-      </section>
+        <!-- ABOUT — coloured card back -->
+        <section class="view about" data-view="about">
+          <p>My name is Alexander, but most people call me Alex. I like the library. I am a 23 year old student enrolled online at USU studying Information Systems.</p>
+        </section>
 
-      <!-- CONTACT — phone number + Calendly scheduling link (plain anchor, opens in a new tab; no third-party script loaded) -->
-      <section class="view contact" data-view="contact">
-        <p class="contact-lead">Call <a href="tel:+18016943473">801-694-3473</a>.</p>
-        <p class="contact-lead"><a href="https://calendly.com/zanderman765/15-minute-meeting" target="_blank" rel="noopener noreferrer">[Schedule a 15-minute meeting ↗]</a></p>
-      </section>
+        <!-- CONTACT — coloured card back; phone + Calendly link (opens in a new tab, no third-party script) -->
+        <section class="view contact" data-view="contact">
+          <p class="contact-lead">Call <a href="tel:+18016943473">801-694-3473</a>.</p>
+          <p class="contact-lead"><a href="https://calendly.com/zanderman765/15-minute-meeting" target="_blank" rel="noopener noreferrer">[Schedule a 15-minute meeting ↗]</a></p>
+        </section>
+      </div>
+
+      <!-- project index — below the card, shown only on Home (empty until you add work) -->
+      <nav class="index" id="nav">
+        <ul id="list"></ul>
+      </nav>
     </div>
   </div>
 
@@ -391,16 +430,63 @@
   const navLinks = [...document.querySelectorAll(".intro [data-nav]")];
   const views = [...document.querySelectorAll(".view[data-view]")];
   const viewNames = new Set(views.map((v) => v.dataset.view));
-  function showView(name) {
-    const target = viewNames.has(name) ? name : "home";
-    views.forEach((v) => v.classList.toggle("is-active", v.dataset.view === target));
-    navLinks.forEach((a) => a.classList.toggle("is-active", a.dataset.nav === target));
+  const panel = document.getElementById("panel");
+  const card = document.getElementById("card");
+
+  const FLIP_MS = 208;   // half-flip duration (a full turn is 2×)
+  const smallScreen = () =>
+    window.matchMedia("(max-width: 700px), (max-width: 950px) and (max-height: 600px)").matches;
+  const reduceMotion = () =>
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  let current = null, busy = false, queued = null;
+
+  // paint = swap which face + nav link is active (no animation)
+  function paint(name) {
+    views.forEach((v) => v.classList.toggle("is-active", v.dataset.view === name));
+    navLinks.forEach((a) => a.classList.toggle("is-active", a.dataset.nav === name));
+    panel.dataset.cur = name;
+    current = name;
   }
+
+  // half-flip out (0→90°, edge-on/invisible), swap the face, half-flip in (−90→0°)
+  // rotateX = spin around the horizontal axis, so the card folds top-over-bottom
+  function flip(name) {
+    busy = true;
+    card.style.transition = "transform " + FLIP_MS + "ms cubic-bezier(.4,0,1,1)";
+    card.style.transform = "rotateX(90deg)";
+    setTimeout(() => {
+      paint(name);                              // swap while the card is edge-on
+      card.style.transition = "none";
+      card.style.transform = "rotateX(-90deg)";
+      void card.offsetWidth;                    // commit the jump before easing back
+      card.style.transition = "transform " + FLIP_MS + "ms cubic-bezier(0,0,.2,1)";
+      card.style.transform = "rotateX(0deg)";
+      setTimeout(() => {
+        card.style.transition = "";
+        card.style.transform = "";
+        busy = false;
+        if (queued && queued !== current) { const q = queued; queued = null; flip(q); }
+        else queued = null;
+      }, FLIP_MS);
+    }, FLIP_MS);
+  }
+
+  function showView(name, animate) {
+    const target = viewNames.has(name) ? name : "home";
+    if (!animate || smallScreen() || reduceMotion()) { paint(target); return; }
+    if (target === current) return;             // already on this face — no flip
+    if (busy) { queued = target; return; }      // mid-flip — remember the latest request
+    flip(target);
+  }
+
   function routeFromHash() {
-    showView((location.hash || "").replace(/^#/, "").toLowerCase());
+    showView((location.hash || "").replace(/^#/, "").toLowerCase(), true);
   }
   window.addEventListener("hashchange", routeFromHash);
-  routeFromHash();
+
+  // initial load paints the starting face without a flip
+  showView((location.hash || "").replace(/^#/, "").toLowerCase(), false);
 
   // (A contact submission form will be wired up later with a real backend.)
 </script>
